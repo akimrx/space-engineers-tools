@@ -1,12 +1,10 @@
 import os
 
 from app.models.backup import Backup
-
+from app.constants import SAVES
 from app.interfaces.ext.storage import ObjectStorage
+
 from zipfile import ZipFile, ZIP_DEFLATED
-
-
-backup_path = '/Users/faskhutdinov/boto3-test'
 
 
 def create_archive(path: str, archive_name: str) -> None:
@@ -21,10 +19,10 @@ def create_archive(path: str, archive_name: str) -> None:
 def upload_backups() -> None:
     s3 = ObjectStorage()
 
-    for dirname in os.listdir(backup_path):
-        directory_abs_path = f"{backup_path}/{dirname}"
+    for dirname in os.listdir(SAVES):
+        directory_abs_path = f"{SAVES}/{dirname}"
         archive_name = f"{dirname.replace(' ', '-')}.zip"
-        archive_abs_path = f"{backup_path}/{archive_name}"
+        archive_abs_path = f"{SAVES}/{archive_name}"
 
         create_archive(directory_abs_path, archive_abs_path)
         
@@ -46,4 +44,5 @@ def list_backups():
 
 
 if __name__ == "__main__":
-    list_backups()
+    upload_backups()
+
