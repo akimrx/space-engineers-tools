@@ -9,7 +9,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 backup_path = '/Users/faskhutdinov/boto3-test'
 
 
-def create_archive(path: str, archive_name: str):
+def create_archive(path: str, archive_name: str) -> None:
     with ZipFile(archive_name, "w", compression=ZIP_DEFLATED) as archive:
         for dirname, subdirs, files in os.walk(path):
             for filename in files:
@@ -18,7 +18,7 @@ def create_archive(path: str, archive_name: str):
     archive.close()
 
 
-def upload_backups():
+def upload_backups() -> None:
     s3 = ObjectStorage()
 
     for dirname in os.listdir(backup_path):
@@ -26,7 +26,8 @@ def upload_backups():
         archive_name = f"{dirname.replace(' ', '-')}.zip"
         archive_abs_path = f"{backup_path}/{archive_name}"
 
-        zipfile = create_archive(directory_abs_path, archive_abs_path)
+        create_archive(directory_abs_path, archive_abs_path)
+        
         s3.upload_object(
             filename=archive_abs_path,
             path="backups",
