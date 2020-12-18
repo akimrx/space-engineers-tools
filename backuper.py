@@ -22,7 +22,7 @@ def upload_backups() -> None:
     for dirname in os.listdir(SAVES):
         directory_abs_path = f"{SAVES}/{dirname}"
         archive_name = f"{dirname.replace(' ', '-')}.zip"
-        archive_abs_path = f"{SAVES}/{ia::rchive_name}"
+        archive_abs_path = f"{SAVES}/{archive_name}"
 
         create_archive(directory_abs_path, archive_abs_path)
         
