@@ -1,2 +1,3 @@
-boto3
+aioboto3
 pyyaml
+pyinstaller
