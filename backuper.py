@@ -83,7 +83,7 @@ async def print_online_backups(limit: int = 10):
     objects = await s3.list_objects(prefix=PREFIX, as_url=True)
     print("\nOnline backups:")
 
-    for i in reversed(objects)[:limit]:
+    for i in reversed(objects[limit:]):
         print(i)
 
 
