@@ -79,11 +79,11 @@ async def upload_backups(dirname: str) -> None:
         logger.warning(f"Artifact {compressed_backup} was not deleted")
 
 
-async def print_online_backups(limit: int = 10):
+async def print_online_backups():
     objects = await s3.list_objects(prefix=PREFIX, as_url=True)
     print("\nOnline backups:")
 
-    for i in objects[:limit]:
+    for i in objects:
         print(i)
 
 

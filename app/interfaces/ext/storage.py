@@ -34,7 +34,8 @@ class ObjectStorage(Base):
     async def list_objects(
         self,
         prefix: str = "",
-        limit: int = 100,
+        maxkeys: int = 1000,
+        limit: int = 10,
         as_url: bool = False,
         simple: bool = False
     ) -> List:
@@ -43,7 +44,7 @@ class ObjectStorage(Base):
         async with aioboto3.resource("s3", endpoint_url=self.endpoint) as s3:
             bucket = await s3.Bucket(self.bucket)
 
-            async for obj in bucket.objects.filter(MaxKeys=limit, Prefix=prefix):
+            async for obj in bucket.objects.filter(MaxKeys=maxkeys, Prefix=prefix):
                 if simple and as_url:
                     raise RuntimeError(f"'simple' and 'as_url' args can't be passed together.")
                 elif simple:
@@ -53,7 +54,7 @@ class ObjectStorage(Base):
 
                 objects.append(obj)
 
-        return objects
+        return objects[:limit]
 
     async def upload_object(
         self,
