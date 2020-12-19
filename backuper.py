@@ -80,10 +80,10 @@ async def upload_backups(dirname: str) -> None:
 
 
 async def print_online_backups():
-    objects = await s3.list_objects(prefix=PREFIX, as_url=True)
+    objects = await s3.list_objects(prefix=PREFIX, as_url=True, limit=10)
     print("\nOnline backups:")
 
-    for i in reversed(objects):
+    for i in objects:
         print(i)
 
 
