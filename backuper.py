@@ -2,7 +2,7 @@ import os
 import asyncio
 import logging
 
-from typing import Coroutine
+from typing import Coroutine, List
 from itertools import groupby
 from zipfile import ZipFile, ZIP_DEFLATED
 
