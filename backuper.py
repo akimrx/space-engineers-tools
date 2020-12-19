@@ -2,6 +2,7 @@ import os
 import asyncio
 import logging
 
+from itertools import groupby
 from zipfile import ZipFile, ZIP_DEFLATED
 
 from app.constants import SAVES, PREFIX, ENDPOINT, BUCKET
@@ -79,12 +80,27 @@ async def upload_backups(dirname: str) -> None:
         logger.warning(f"Artifact {compressed_backup} was not deleted")
 
 
-async def print_online_backups():
+async def print_online_backups(group_by_date: bool = True):
     objects = await s3.list_objects(prefix=PREFIX, as_url=True)
-    print("\nOnline backups:")
+    print("\n")
+    print("=" * 77)
+    print(" " * 28, "ONLINE BACKUPS")
+    print("=" * 77)
 
-    for i in reversed(objects):
-        print(i)
+    if group_by_date:
+        grouped_list = [
+            list(j) for i, j in groupby(objects, lambda k: "-".join(k.split("/")[-1].split("-")[:3]))
+        ]
+        for backup_group in grouped_list:
+            print("-" * 77)
+            print(" " * 30, "/".join(backup_group[0].split("/")[-1].split("-")[:3]))
+            print("-" * 77)
+            for backup in backup_group:
+                print(backup)
+
+    else:
+        for i in reversed(objects):
+            print(i)
 
 
 def generate_upload_tasks():
