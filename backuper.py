@@ -2,6 +2,7 @@ import os
 import asyncio
 import logging
 
+from typing import Coroutine
 from itertools import groupby
 from zipfile import ZipFile, ZIP_DEFLATED
 
@@ -11,7 +12,7 @@ from app.interfaces.ext.storage import ObjectStorage
 
 logging.basicConfig(
     level=logging.INFO,
-    datefmt="%d %B %H:%M:%S",
+    datefmt="%H:%M:%S",
     format="%(asctime)s – %(levelname)s – %(message)s"
 )
 
@@ -51,7 +52,7 @@ def remove_artifacts(filepath: str) -> None:
         logging.error(f"Can't delete artifact {filepath}, cause: {e}")
 
 
-async def list_online_backups():
+async def list_online_backups() -> List:
     objects = await s3.list_objects(prefix=PREFIX, simple=True)
     return objects
 
@@ -80,7 +81,7 @@ async def upload_backups(dirname: str) -> None:
         logger.warning(f"Artifact {compressed_backup} was not deleted")
 
 
-async def print_online_backups(group_by_date: bool = True):
+async def print_online_backups(group_by_date: bool = True) -> None:
     objects = await s3.list_objects(prefix=PREFIX, as_url=True)
     print("\n")
     print("=" * 77)
@@ -103,7 +104,7 @@ async def print_online_backups(group_by_date: bool = True):
             print(i)
 
 
-def generate_upload_tasks():
+def generate_upload_tasks() -> Coroutine:
     tasks = [
         upload_backups(dirname)
         for dirname in os.listdir(SAVES)
@@ -113,7 +114,7 @@ def generate_upload_tasks():
     return asyncio.gather(*tasks)
 
 
-def main(tasks):
+def main(tasks) -> None:
     loop = asyncio.get_event_loop()
 
     for task in tasks:
