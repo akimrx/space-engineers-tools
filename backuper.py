@@ -2,16 +2,15 @@ import os
 import asyncio
 import logging
 
-from app.models.backup import Backup
-from app.constants import SAVES, PREFIX
-from app.interfaces.ext.storage import ObjectStorage
-
 from zipfile import ZipFile, ZIP_DEFLATED
+
+from app.constants import SAVES, PREFIX, ENDPOINT, BUCKET
+from app.interfaces.ext.storage import ObjectStorage
 
 
 logging.basicConfig(
     level=logging.INFO,
-    datefmt="%d %b %H:%M:%S",
+    datefmt="%d %B %H:%M:%S",
     format="%(asctime)s – %(levelname)s – %(message)s"
 )
 
@@ -21,59 +20,92 @@ logging.getLogger('botocore').setLevel(logging.WARNING)
 logging.getLogger('nose').setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
+s3 = ObjectStorage(endpoint=ENDPOINT, bucket=BUCKET)
 
 
-async def create_archive(path: str, archive_name: str) -> None:
-    logger.info(f"Compressing {archive_name}")
+def create_archive(filepath: str, archive_name: str, dest: str = None) -> str:
+    if not archive_name.endswith(".zip"):
+        archive_name = f"{archive_name}.zip"
 
-    with ZipFile(archive_name, "w", compression=ZIP_DEFLATED) as archive:
-        for dirname, subdirs, files in os.walk(path):
+    if dest is None:
+        dest = os.getcwd()
+
+    blob = f"{dest}/{archive_name}"
+    logger.debug(f"Creating {blob}")
+
+    with ZipFile(blob, "w", compression=ZIP_DEFLATED) as archive:
+        for dirname, subdirs, files in os.walk(filepath):
             for filename in files:
                 fullpath = os.path.join(dirname, filename)
                 archive.write(fullpath, os.path.basename(fullpath))
     archive.close()
+    return blob
 
 
-async def upload_backups() -> None:
-    logger.info(f"Prepare backups for upload to S3...")
-
-    for dirname in os.listdir(SAVES):
-        directory_abs_path = f"{SAVES}/{dirname}"
-        archive_name = f"{dirname.replace(' ', '-')}.zip"
-        archive_abs_path = f"{SAVES}/{archive_name}"
-
-        logger.info(f"Prepare .zip archive...")
-        await create_archive(directory_abs_path, archive_abs_path)
-
-        logger.info(f"Starting upload file {archive_name}")
-        await ObjectStorage().upload_object(
-            filename=archive_abs_path,
-            prefix=PREFIX,
-            objectname=archive_name
-        )
-
-        logger.info(f"Removing artifacts: {archive_abs_path}")
-        os.remove(archive_abs_path)
+def remove_artifacts(filepath: str) -> None:
+    try:
+        logger.debug(f"Removing artifacts {filepath}")
+        os.remove(filepath)
+    except Exception as e:
+        logging.error(f"Can't delete artifact {filepath}, cause: {e}")
 
 
-async def list_backups():
-    data = await ObjectStorage().list_objects(prefix=PREFIX)
-    objects = Backup.de_list(data)
-
-    for obj in objects:
-        print(obj.url)
+async def list_online_backups():
+    objects = await s3.list_objects(prefix=PREFIX, simple=True)
+    return objects
 
 
-def main():
+async def upload_backups(dirname: str) -> None:
+    backup_path = f"{SAVES}/{dirname}"
+    filename = dirname.replace(' ', '-')
+    search_pattern = f"{BUCKET}/{PREFIX}/{filename}.zip"
+
+    existing_objects = await list_online_backups()
+    if search_pattern in existing_objects:
+        logging.warning(f"File {search_pattern} already uploaded, skipping")
+        return
+
+    compressed_backup = create_archive(backup_path, filename, dest=SAVES)
+    upload_result = await s3.upload_object(
+        filename=compressed_backup.split("/")[-1],
+        filepath=compressed_backup,
+        prefix=PREFIX
+    )
+
+    if upload_result is not None:
+        remove_artifacts(compressed_backup)
+    else:
+        logger.error(f"File {compressed_backup} not uploaded!")
+        logger.warning(f"Artifact {compressed_backup} was not deleted")
+
+
+async def print_online_backups():
+    objects = await s3.list_objects(prefix=PREFIX, as_url=True)
+    print("\nOnline backups:")
+
+    for i in reversed(objects):
+        print(i)
+
+
+def generate_upload_tasks():
+    tasks = [
+        upload_backups(dirname)
+        for dirname in os.listdir(SAVES)
+    ]
+
+    logger.info(f"Create {len(tasks)} tasks for uploading.")
+    return asyncio.gather(*tasks)
+
+
+def main(tasks):
     loop = asyncio.get_event_loop()
-    tasks = [upload_backups, list_backups]
 
     for task in tasks:
-        loop.run_until_complete(
-            asyncio.wait(
-                [task()]
-            )
-        )
+        loop.run_until_complete(task())
+    loop.close()
+
 
 if __name__ == "__main__":
-    main()
+    logger.info(f"Found {len(os.listdir(SAVES))} backups.")
+    tasks = [generate_upload_tasks, print_online_backups]
+    main(tasks)
