@@ -45,4 +45,5 @@ def list_backups():
 
 if __name__ == "__main__":
     upload_backups()
+    list_backups()
 
