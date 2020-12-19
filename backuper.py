@@ -125,4 +125,10 @@ def main(tasks) -> None:
 if __name__ == "__main__":
     logger.info(f"Found {len(os.listdir(SAVES))} backups.")
     tasks = [generate_upload_tasks, print_online_backups]
-    main(tasks)
+
+    try:
+        main(tasks)
+    except RuntimeError as e:
+        logger.debug(f"Runtime error raised, {e}")
+    except Exception as e:
+        logger.error(e)
