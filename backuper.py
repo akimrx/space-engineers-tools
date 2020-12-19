@@ -78,12 +78,6 @@ async def upload_backups(dirname: str) -> None:
         logger.error(f"File {compressed_backup} not uploaded!")
         logger.warning(f"Artifact {compressed_backup} was not deleted")
 
-<<<<<<< HEAD
-if __name__ == "__main__":
-    upload_backups()
-    list_backups()
-=======
->>>>>>> d2cac6ce32b1127801a53672bb76fa29c749eb39
 
 async def print_online_backups():
     objects = await s3.list_objects(prefix=PREFIX, as_url=True)
