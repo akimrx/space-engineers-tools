@@ -2,13 +2,17 @@
 
 import os
 import boto3
+import logging
 
+from app.models.base import Base
+
+logger = logging.getLogger(__name__)
 
 ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY')
 SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
 
 
-class ObjectStorage(object):
+class ObjectStorage(Base):
     def __init__(
         self,
         access_key=None,
@@ -26,16 +30,21 @@ class ObjectStorage(object):
 
 
     def _session(self):
+        logger.debug(f"Init boto3 session details={self}")
         s3 = boto3.session.Session()
         session = s3.client(
             service_name=self.service,
             endpoint_url=self.endpoint,
         )
+        logger.debug(f"Session ready details={session}")
         return session
 
-    async def list_objects(self, path: str = None):
-        resource = self.bucket + path if path else self.bucket
-        objects = self._session().list_objects(Bucket=resource).get("Contents")
+    async def list_objects(self, prefix: str = None, limit: int = 100):
+        objects = self._session().list_objects(
+            Bucket=self.bucket,
+            MaxKeys=limit,
+            Prefix=prefix
+        ).get("Contents")
 
         if not objects:
             return []
@@ -47,8 +56,9 @@ class ObjectStorage(object):
             Key=key
         )
 
-    async def upload_object(self, filename: str, path: str = None, objectname: str = None):
-        obj = f"{path}/{objectname}" if path else objectname
+    async def upload_object(self, filename: str, prefix: str = None, objectname: str = None):
+        obj = f"{prefix}/{objectname}" if prefix else objectname
+        logger.debug(f"Uploading file to S3 file={filename} prefix={prefix} name={objectname}")
         self._session().upload_file(filename, self.bucket, obj)
         return self.get_object(key=obj)
 
