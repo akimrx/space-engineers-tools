@@ -33,7 +33,7 @@ class ObjectStorage(object):
         )
         return session
 
-    def list_objects(self, path: str = None):
+    async def list_objects(self, path: str = None):
         resource = self.bucket + path if path else self.bucket
         objects = self._session().list_objects(Bucket=resource).get("Contents")
 
@@ -47,7 +47,7 @@ class ObjectStorage(object):
             Key=key
         )
 
-    def upload_object(self, filename: str, path: str = None, objectname: str = None):
+    async def upload_object(self, filename: str, path: str = None, objectname: str = None):
         obj = f"{path}/{objectname}" if path else objectname
         self._session().upload_file(filename, self.bucket, obj)
         return self.get_object(key=obj)
